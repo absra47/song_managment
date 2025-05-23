@@ -1,9 +1,3 @@
-Alright, let's transform your README into a more song-centric and engaging guide for your Music Catalog API! I'll update the descriptions and examples to reflect songs instead of generic "items."
-
-Here's the edited `README.md` content:
-
----
-
 # Music Catalog API
 
 This repository showcases a simple **Create, Read, Update, and Delete (CRUD)** API built with **FastAPI**. It's designed to manage a collection of songs, using an in-memory list to simulate a database. This project is perfect for understanding fundamental API operations and project structure.
