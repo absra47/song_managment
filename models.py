@@ -1,28 +1,18 @@
-from typing import Optional
-from pydantic import BaseModel
+from sqlalchemy import Column, Integer, String
+from database import Base # Import Base directly from database.py
 
-# Base Song model: defines the complete structure of a song
-class Song(BaseModel):
-    id: int
-    title: str
-    artist: str
-    album: str
-    genre: str
-    release_year: int
+# Define the SQLAlchemy ORM model for the 'songs' table
+class Song(Base):
+    __tablename__ = "songs" # Name of the table in the database
 
-# Model for creating a song: 'id' is optional as it might be assigned by the server
-class SongCreate(BaseModel):
-    id: Optional[int] = None # Allow client to provide ID, or server generates
-    title: str
-    artist: str
-    album: str
-    genre: str
-    release_year: int
+    id = Column(Integer, primary_key=True, index=True) # Primary key, indexed for quick lookups
+    title = Column(String, index=True)
+    artist = Column(String, index=True)
+    album = Column(String, index=True)
+    genre = Column(String)
+    release_year = Column(Integer)
 
-# Model for updating a song: all fields are optional for partial updates (PATCH)
-class SongUpdate(BaseModel):
-    title: Optional[str] = None
-    artist: Optional[str] = None
-    album: Optional[str] = None
-    genre: Optional[str] = None
-    release_year: Optional[int] = None
+    # This __repr__ method is useful for debugging, helps in printing objects.
+    def __repr__(self):
+        return (f"<Song(id={self.id}, title='{self.title}', artist='{self.artist}', "
+                f"album='{self.album}', genre='{self.genre}', release_year={self.release_year})>")
