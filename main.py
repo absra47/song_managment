@@ -1,6 +1,7 @@
 from typing import List, Optional, Generator
 from fastapi import FastAPI, HTTPException, status, Depends,Query
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 # Import your SQLAlchemy ORM models, Pydantic schemas, and database setup
 # Note: These are absolute imports because main.py is the top-level script.
@@ -8,6 +9,7 @@ import models
 import schemas
 from database import SessionLocal, create_db_and_tables # No need to import 'engine' here
 import crud 
+import lyrics_fetcher
 
 # Initialize FastAPI application with metadata
 app = FastAPI(
@@ -25,6 +27,11 @@ def get_db() -> Generator[Session, None, None]:
         yield db # Yield the session to the endpoint function
     finally:
         db.close() # Close the session after the request is processed
+# --- NEW: Pydantic Schema for Lyrics Response ---
+class LyricsResponse(BaseModel):
+    title: str
+    artist: str
+    lyrics: str
 
 # --- Application Startup Event ---
 # This decorator runs the 'on_startup' function when the FastAPI application starts up.
@@ -159,3 +166,35 @@ async def search_songs_endpoint(
         release_year=release_year
     )
     return songs
+
+# --- NEW: Lyrics Fetcher Endpoint ---
+@app.get("/lyrics", response_model=LyricsResponse, summary="Fetch lyrics for a song")
+async def get_lyrics_endpoint(
+    song: str = Query(..., description="The title of the song."),
+    artist: str = Query(..., description="The artist of the song.")
+):
+    """
+    Fetches lyrics for a given song and artist from an external API.
+    Results are cached for 10 minutes.
+
+    Args:
+        song (str): The title of the song.
+        artist (str): The artist of the song.
+
+    Returns:
+        LyricsResponse: An object containing the song title, artist, and lyrics.
+
+    Raises:
+        HTTPException:
+            - 404 Not Found: If lyrics cannot be found for the specified song and artist.
+            - 500 Internal Server Error: If there's an issue with the external lyrics API or caching.
+    """
+    lyrics = lyrics_fetcher.fetch_lyrics(artist=artist, title=song)
+
+    if lyrics is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Lyrics not found for '{song}' by '{artist}'."
+        )
+    
+    return LyricsResponse(title=song, artist=artist, lyrics=lyrics)

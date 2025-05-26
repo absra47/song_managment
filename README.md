@@ -1,6 +1,6 @@
 # Music Catalog API
 
-This is a FastAPI application designed to manage a personal music collection. It allows you to perform **Create, Read, Update, and Delete (CRUD)** operations on songs, now with **persistent data storage** and **advanced search capabilities**.
+This is a FastAPI application designed to manage a personal music collection. It allows you to perform **Create, Read, Update, and Delete (CRUD)** operations on songs, now with **persistent data storage**, **advanced search capabilities**, and **external lyrics fetching**.
 
 ---
 
@@ -23,6 +23,21 @@ This stage significantly elevates the API from an in-memory demonstration to a r
 
 ---
 
+## 🎤 Stage 3: External Integration - Lyrics Fetcher (Completed!)
+
+This stage introduces the ability to fetch song lyrics from an external API, enhancing the utility of the music catalog. A robust caching mechanism is implemented to improve performance and reduce external API calls.
+
+### ✨ Key Enhancements:
+
+- **External Lyrics Fetching:**
+  - New endpoint: `GET /lyrics`
+  - Fetches lyrics for songs by title and artist from `lyrics.ovh`.
+  - Handles various API response scenarios, including songs not found.
+- **In-Memory Caching:** Lyrics results are cached for **10 minutes** using `cachetools` to reduce redundant external API calls and improve response times.
+- **Graceful Error Handling:** Clear error responses are provided when lyrics cannot be found or if there are issues with the external API.
+
+---
+
 ## 💡 Features
 
 - **FastAPI Framework**: Built using FastAPI for creating robust and high-performance web APIs.
@@ -38,6 +53,8 @@ This stage significantly elevates the API from an in-memory demonstration to a r
   - `DELETE /songs/{song_id}`: Remove a song from the catalog.
 - **Advanced Search Functionality**: Search songs by multiple criteria with `GET /songs/search/`.
 - **Pagination**: Control the number of results and offset using `skip` and `limit` parameters in search and retrieval.
+- **External Lyrics Integration**: Fetch song lyrics from `lyrics.ovh` via a dedicated endpoint.
+- **In-Memory Caching**: Improve performance by caching lyrics results for 10 minutes.
 - **HTTP Status Codes**: Uses appropriate HTTP status codes (e.g., `201 Created`, `200 OK`, `204 No Content`, `400 Bad Request`, `404 Not Found`) for clear communication with clients.
 - **Error Handling**: Implements basic error handling using `HTTPException` for scenarios like songs not found or invalid requests.
 
@@ -61,8 +78,6 @@ git clone <your-repository-url> # Replace with your actual repository URL
 cd song_managment # Or adjust to your project's root directory name
 ```
 
-````
-
 ### 2. Create and Activate Virtual Environment
 
 It's highly recommended to use a virtual environment to manage dependencies:
@@ -81,7 +96,11 @@ Install all the necessary Python packages. These are listed in `requirements.txt
 pip install -r requirements.txt
 ```
 
-_(If you don't have `requirements.txt` generated yet, you can run: `pip install fastapi "uvicorn[standard]" sqlalchemy python-dotenv`)_
+_(If you don't have `requirements.txt` generated yet, ensure you install `requests` and `cachetools` along with the others):_
+
+```bash
+pip install fastapi "uvicorn[standard]" sqlalchemy python-dotenv requests cachetools
+```
 
 ### 4. Database Setup
 
@@ -162,7 +181,7 @@ Here's a quick overview of the available endpoints and how to interact with your
 - **Examples:**
   - Search by artist and year: `http://127.0.0.1:8000/songs/search?artist=Drake&release_year=2020`
   - Search by title and genre: `http://127.0.0.1:8000/songs/search?title=Bohemian&genre=Rock`
-  - Get the next 10 results after the first 20 for 'Pop' songs: `http://127.0.0.1:8000/songs/search?genre=Pop&skip=20&limit=10`
+  - Get the next 10 results after the first 20 for 'Pop' songs: `http://17.0.0.1:8000/songs/search?genre=Pop&skip=20&limit=10`
 
 ### 5. Update a Song (Full Replacement)
 
@@ -204,6 +223,18 @@ Here's a quick overview of the available endpoints and how to interact with your
 - **Description**: Removes a song from the catalog.
 - **Response**: `204 No Content` on success.
 
+### 8. Fetch Song Lyrics
+
+- **URL**: `/lyrics`
+- **Method**: `GET`
+- **Description**: Fetches lyrics for a given song and artist. Results are cached for 10 minutes.
+- **Query Parameters**:
+  - `song`: The title of the song (required).
+  - `artist`: The artist of the song (required).
+- **Examples:**
+  - Fetch lyrics for "Imagine" by "John Lennon": `http://127.0.0.1:8000/lyrics?song=Imagine&artist=John%20Lennon`
+  - Fetch lyrics for "Bohemian Rhapsody" by "Queen": `http://127.0.0.1:8000/lyrics?song=Bohemian%20Rhapsody&artist=Queen`
+
 ---
 
 ## 👩‍💻 Development
@@ -217,6 +248,7 @@ Here's a quick overview of the available endpoints and how to interact with your
 ├── models.py           # SQLAlchemy ORM models (defines database tables)
 ├── schemas.py          # Pydantic models for request/response data validation
 ├── database.py         # SQLAlchemy database connection and session management
+├── lyrics_fetcher.py   # Logic for fetching and caching song lyrics
 ├── .env                # Environment variables (e.g., DATABASE_URL)
 ├── requirements.txt    # Project dependencies
 └── README.md           # This documentation file
@@ -225,4 +257,3 @@ Here's a quick overview of the available endpoints and how to interact with your
 ```
 
 ```
-````
