@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+.env           # <--- Add this line
+sql_app.db     # <--- Add this line (for the SQLite database file)
+.pytest_cache/
+.mypy_cache/

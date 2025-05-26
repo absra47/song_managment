@@ -74,7 +74,7 @@ Follow these steps to get the project up and running on your local machine.
 If you haven't already, clone the project repository:
 
 ```bash
-git clone <your-repository-url> # Replace with your actual repository URL
+git clone https://github.com/absra47/song_managment.git  # Replace with your actual repository URL
 cd song_managment # Or adjust to your project's root directory name
 ```
 
