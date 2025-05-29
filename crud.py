@@ -7,6 +7,11 @@ from sqlalchemy import or_ # Imported for the search functionality
 # when imported by main.py in this flat project structure.
 import models
 import schemas
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 # No more in-memory list (songs_db) or next_song_id here!
 # All data operations will now go through the 'db' session.
@@ -154,3 +159,37 @@ def search_songs(
         query = query.filter(models.Song.release_year == release_year)
 
     return query.offset(skip).limit(limit).all()
+
+# --- NEW: Function to Update Song Metadata ---
+def update_song_metadata(db: Session, song_id: int, metadata: Dict[str, Any]) -> Optional[models.Song]:
+    """
+    Updates the enriched metadata fields for a specific song in the database.
+
+    Args:
+        db (Session): The SQLAlchemy database session.
+        song_id (int): The ID of the song to update.
+        metadata (Dict[str, Any]): A dictionary containing the new metadata fields
+                                    (e.g., {"bpm": 120, "mood": "Energetic"}).
+
+    Returns:
+        Optional[models.Song]: The updated Song ORM object if found, otherwise None.
+    """
+    db_song = db.query(models.Song).filter(models.Song.id == song_id).first()
+
+    if db_song:
+        # Loop through the metadata dictionary and update corresponding attributes
+        for key, value in metadata.items():
+            # Check if the key is a valid attribute of the Song model
+            if hasattr(db_song, key):
+                setattr(db_song, key, value)
+            else:
+                logger.warning(f"Attempted to set unknown metadata field '{key}' for song ID {song_id}.")
+        
+        db.add(db_song) # Add the modified object to the session
+        db.commit()      # Commit the transaction to save changes
+        db.refresh(db_song) # Refresh the object to get the latest state from the DB
+        logger.info(f"Successfully updated metadata for song ID: {song_id}")
+        return db_song
+    else:
+        logger.warning(f"Attempted to update metadata for non-existent song ID: {song_id}")
+        return None

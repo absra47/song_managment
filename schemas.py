@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel,ConfigDict
 
 # Base Song model: defines the complete structure of a song
 class Song(BaseModel):
@@ -9,11 +9,12 @@ class Song(BaseModel):
     album: str
     genre: str
     release_year: int
-class Config:
-        # IMPORTANT: This tells Pydantic to read data even if it's not a dict, but an ORM model.
-        # This is crucial for returning SQLAlchemy ORM objects directly from your API.
-        # Since your Pydantic version is 1.x, use 'orm_mode = True'.
-        orm_mode = True # Use this for Pydantic v1
+    bpm: Optional[int] = None
+    mood: Optional[str] = None
+    enriched_genre: Optional[str] = None
+    
+ # --- Pydantic V2 Configuration ---
+    model_config = ConfigDict(from_attributes=True) 
 # Model for creating a song: 'id' is optional as it might be assigned by the server
 class SongCreate(BaseModel):
     id: Optional[int] = None # Allow client to provide ID, or server generates
@@ -30,3 +31,10 @@ class SongUpdate(BaseModel):
     album: Optional[str] = None
     genre: Optional[str] = None
     release_year: Optional[int] = None
+
+# --- NEW: Schema for Metadata Enrichment Request ---
+class SongEnrichmentRequest(BaseModel):
+    song_id: int
+    # You might add other fields if the mock service needs them, e.g., title, artist
+    # title: str
+    # artist: str

@@ -1,15 +1,22 @@
 from typing import List, Optional, Generator
-from fastapi import FastAPI, HTTPException, status, Depends,Query
+from fastapi import FastAPI, HTTPException, status, Depends, Query, BackgroundTasks # NEW: Import BackgroundTasks
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 # Import your SQLAlchemy ORM models, Pydantic schemas, and database setup
-# Note: These are absolute imports because main.py is the top-level script.
 import models
 import schemas
 from database import SessionLocal, create_db_and_tables # No need to import 'engine' here
 import crud 
 import lyrics_fetcher
+import mock_enrichment_service # NEW: Import the mock enrichment service
+
+# Configure logging for better visibility across modules
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
 
 # Initialize FastAPI application with metadata
 app = FastAPI(
@@ -17,6 +24,11 @@ app = FastAPI(
     description="A CRUD API for managing a music catalog with persistent SQLite storage using SQLAlchemy.",
     version="2.0.0", # Updated version for database integration
 )
+
+ #Create the database tables on startup
+@app.on_event("startup")
+def on_startup():
+    create_db_and_tables() # Ensure tables exist, including new metadata columns
 
 # --- Database Dependency ---
 # This function provides a database session for each request.
@@ -33,29 +45,43 @@ class LyricsResponse(BaseModel):
     artist: str
     lyrics: str
 
-# --- Application Startup Event ---
-# This decorator runs the 'on_startup' function when the FastAPI application starts up.
-# It's used to create database tables if they don't already exist.
-@app.on_event("startup")
-def on_startup():
-    create_db_and_tables() # Call the utility function to create tables
 
 # --- API Endpoints (now using database sessions) ---
+# --- NEW: Background Task for Metadata Enrichment ---
+async def enrich_song_metadata_task(song_id: int, db: Session):
+    """
+    Background task to fetch and store enriched metadata for a song.
+    This function runs asynchronously in the background after the API response is sent.
+    """
+    logger.info(f"Background task started: Enriching metadata for song ID: {song_id}")
+    
+    # 1. Retrieve song details from the database
+    song_from_db = crud.get_song_by_id(db, song_id)
+    if not song_from_db:
+        logger.error(f"Background task: Song with ID {song_id} not found in DB. Cannot enrich metadata.")
+        return
+
+    # 2. Call the mock external service to fetch metadata
+    # Pass title and artist from the song retrieved from DB
+    enriched_data = await mock_enrichment_service.fetch_mock_metadata(
+        song_id=song_from_db.id,
+        title=song_from_db.title,
+        artist=song_from_db.artist
+    )
+
+    if enriched_data:
+        # 3. Store the enriched metadata in the database
+        updated_song = crud.update_song_metadata(db, song_id, enriched_data)
+        if updated_song:
+            logger.info(f"Background task: Successfully enriched and updated metadata for song ID: {song_id}")
+        else:
+            logger.error(f"Background task: Failed to update metadata for song ID: {song_id} in DB.")
+    else:
+        logger.warning(f"Background task: No metadata found from mock service for song ID: {song_id}")
 
 # CREATE Operation: Add a new song
 @app.post("/songs/", response_model=schemas.Song, status_code=status.HTTP_201_CREATED, summary="Add a new song to the catalog")
 async def create_song_endpoint(song_data: schemas.SongCreate, db: Session = Depends(get_db)):
-    """
-    Creates a new song in the catalog.
-    - **id**: Optional. If not provided or 0, a new unique ID will be assigned by the database.
-    - **title**: The title of the song.
-    - **artist**: The artist of the song.
-    - **album**: The album the song belongs to.
-    - **genre**: The genre of the song.
-    - **release_year**: The year the song was released.
-    Raises:
-    - `400 Bad Request`: If a song with the provided ID already exists.
-    """
     new_song = crud.create_new_song(db=db, song_data=song_data)
     if new_song is None:
         raise HTTPException(
@@ -64,22 +90,21 @@ async def create_song_endpoint(song_data: schemas.SongCreate, db: Session = Depe
         )
     return new_song
 
-# READ Operation: Retrieve all songs
-@app.get("/songs/", response_model=List[schemas.Song], summary="Retrieve all songs in the catalog")
-async def read_all_songs_endpoint(db: Session = Depends(get_db)):
+# READ Operation: Retrieve all songs (with pagination)
+@app.get("/songs/", response_model=List[schemas.Song], summary="Retrieve all songs in the catalog with pagination")
+async def read_all_songs_endpoint(
+    skip: int = Query(0, ge=0, description="Number of items to skip (for pagination)"),
+    limit: int = Query(100, gt=0, le=1000, description="Maximum number of items to return (for pagination)"),
+    db: Session = Depends(get_db)
+):
     """
-    Retrieves a list of all songs currently in the catalog.
+    Retrieves a list of all songs currently in the catalog, with optional pagination.
     """
-    return crud.get_all_songs(db=db)
+    return crud.get_all_songs(db=db, skip=skip, limit=limit)
 
-# READ Operation: Retrieve a single song by ID
+# READ Operation: Retrieve a single song by ID (will now include enriched metadata)
 @app.get("/songs/{song_id}", response_model=schemas.Song, summary="Retrieve a single song by its ID")
 async def read_song_by_id_endpoint(song_id: int, db: Session = Depends(get_db)):
-    """
-    Retrieves a single song by its unique ID.
-    Raises:
-    - `404 Not Found`: If the song with the given ID is not found.
-    """
     song = crud.get_song_by_id(db=db, song_id=song_id)
     if song is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Song with ID {song_id} not found")
@@ -198,3 +223,45 @@ async def get_lyrics_endpoint(
         )
     
     return LyricsResponse(title=song, artist=artist, lyrics=lyrics)
+
+# --- NEW: Metadata Enrichment Endpoint ---
+@app.post("/enrich-metadata", status_code=status.HTTP_202_ACCEPTED, summary="Trigger asynchronous metadata enrichment for a song")
+async def enrich_metadata_endpoint(
+    song_enrichment_request: schemas.SongEnrichmentRequest,
+    background_tasks: BackgroundTasks, # FastAPI's dependency for background tasks
+    db: Session = Depends(get_db)
+):
+    """
+    Triggers an asynchronous background task to fetch and enrich metadata for a song.
+    The API immediately returns a 202 Accepted response, and the enrichment
+    process happens in the background.
+
+    Args:
+        song_enrichment_request (schemas.SongEnrichmentRequest): Contains the song_id to enrich.
+        background_tasks (BackgroundTasks): FastAPI's dependency to add background tasks.
+        db (Session): Database session.
+
+    Returns:
+        Dict: A message indicating the enrichment task has been queued.
+
+    Raises:
+        HTTPException: 404 Not Found if the song_id does not exist.
+    """
+    song_id = song_enrichment_request.song_id
+
+    # Check if the song exists before queuing the background task
+    existing_song = crud.get_song_by_id(db, song_id)
+    if not existing_song:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Song with ID {song_id} not found. Cannot queue enrichment."
+        )
+
+    # Add the enrichment task to FastAPI's background tasks.
+    # We pass a new DB session to the background task to ensure it has its own session.
+    # This is crucial because the main request's DB session will be closed after the response.
+    background_tasks.add_task(enrich_song_metadata_task, song_id, SessionLocal())
+
+    logger.info(f"Metadata enrichment task for song ID {song_id} queued.")
+    return {"message": f"Metadata enrichment for song ID {song_id} has been queued."}
+

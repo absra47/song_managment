@@ -1,259 +1,276 @@
-# Music Catalog API
+Music Catalog API
+This is a FastAPI application designed to manage a personal music collection. It allows you to perform Create, Read, Update, and Delete (CRUD) operations on songs, now with persistent data storage, advanced search capabilities, external lyrics fetching, and asynchronous metadata enrichment.
 
-This is a FastAPI application designed to manage a personal music collection. It allows you to perform **Create, Read, Update, and Delete (CRUD)** operations on songs, now with **persistent data storage**, **advanced search capabilities**, and **external lyrics fetching**.
+🚀 Project Stages Completed
+Stage 1: Basic CRUD API (Completed!)
+Initial setup with FastAPI and in-memory storage.
 
----
+Implemented core CRUD operations for songs.
 
-## 🚀 Stage 2: Persistent Data & Enhanced Search (Completed!)
+Stage 2: Persistent Data & Enhanced Search (Completed!)
+Elevated the API from an in-memory demonstration to a robust application with durable data storage.
 
-This stage significantly elevates the API from an in-memory demonstration to a robust application with durable data storage and powerful filtering.
+Integrated SQLite database and SQLAlchemy ORM for persistent storage.
 
-### ✨ Key Enhancements:
+Introduced a comprehensive song search endpoint (GET /songs/search/) with filtering by title, artist, album, genre, release_year.
 
-- **Persistent Data Storage:** Song records are now stored reliably in an **SQLite database** (`sql_app.db`) using **SQLAlchemy ORM**. Your data will no longer be lost when the server restarts!
-- **Comprehensive Song Search:**
-  - A new endpoint `GET /songs/search/` allows filtering by:
-    - `title` (case-insensitive, partial match)
-    - `artist` (case-insensitive, partial match)
-    - `album` (case-insensitive, partial match)
-    - `genre` (case-insensitive, partial match)
-    - `release_year` (exact match)
-  - Includes **pagination** via `skip` and `limit` query parameters for efficient result handling.
-- **Full CRUD Operations:** All existing Create, Read, Update, and Delete operations now interact directly with the persistent database, ensuring data integrity.
+Added pagination (skip, limit) to search results.
 
----
+Stage 3: External Integration - Lyrics Fetcher (Completed!)
+Introduced the ability to fetch song lyrics from an external API (lyrics.ovh).
 
-## 🎤 Stage 3: External Integration - Lyrics Fetcher (Completed!)
+Implemented an in-memory TTL cache (cachetools) for lyrics results to improve performance and reduce external API calls.
 
-This stage introduces the ability to fetch song lyrics from an external API, enhancing the utility of the music catalog. A robust caching mechanism is implemented to improve performance and reduce external API calls.
+Ensured graceful handling of external API responses and clear error messages.
 
-### ✨ Key Enhancements:
+Stage 4: Scalable Architecture - Metadata Enrichment (Completed!)
+Implemented an asynchronous service to enrich song data with additional metadata (e.g., BPM, mood, enriched genre).
 
-- **External Lyrics Fetching:**
-  - New endpoint: `GET /lyrics`
-  - Fetches lyrics for songs by title and artist from `lyrics.ovh`.
-  - Handles various API response scenarios, including songs not found.
-- **In-Memory Caching:** Lyrics results are cached for **10 minutes** using `cachetools` to reduce redundant external API calls and improve response times.
-- **Graceful Error Handling:** Clear error responses are provided when lyrics cannot be found or if there are issues with the external API.
+Added an endpoint (POST /enrich-metadata) that triggers a background task (using FastAPI's BackgroundTasks) to call a mock external service.
 
----
+Enriched metadata is stored persistently in the database.
 
-## 💡 Features
+The main song retrieval endpoints (GET /songs/, GET /songs/{song_id}) now return the enriched metadata.
 
-- **FastAPI Framework**: Built using FastAPI for creating robust and high-performance web APIs.
-- **Pydantic Models**: Leverages Pydantic for powerful data validation and seamless serialization/deserialization of JSON request and response bodies.
-- **SQLAlchemy ORM**: Utilizes SQLAlchemy for seamless interaction with the SQLite database, mapping Python objects to database tables.
-- **Persistent Data**: Song data is stored in `sql_app.db` (SQLite), ensuring data is saved across application restarts.
-- **Comprehensive CRUD Operations**:
-  - `POST /songs`: Add a new song.
-  - `GET /songs`: Retrieve all songs.
-  - `GET /songs/{song_id}`: Fetch a specific song by its unique ID.
-  - `PUT /songs/{song_id}`: Fully replace an existing song's data.
-  - `PATCH /songs/{song_id}`: Partially update an existing song's attributes.
-  - `DELETE /songs/{song_id}`: Remove a song from the catalog.
-- **Advanced Search Functionality**: Search songs by multiple criteria with `GET /songs/search/`.
-- **Pagination**: Control the number of results and offset using `skip` and `limit` parameters in search and retrieval.
-- **External Lyrics Integration**: Fetch song lyrics from `lyrics.ovh` via a dedicated endpoint.
-- **In-Memory Caching**: Improve performance by caching lyrics results for 10 minutes.
-- **HTTP Status Codes**: Uses appropriate HTTP status codes (e.g., `201 Created`, `200 OK`, `204 No Content`, `400 Bad Request`, `404 Not Found`) for clear communication with clients.
-- **Error Handling**: Implements basic error handling using `HTTPException` for scenarios like songs not found or invalid requests.
+Pagination has been added to the main GET /songs/ endpoint.
 
----
+💡 Features
+FastAPI Framework: Robust and high-performance web APIs.
 
-## 🛠️ Setup and Installation
+Pydantic Models: Data validation and serialization/deserialization.
 
+SQLAlchemy ORM: Seamless interaction with SQLite database.
+
+Persistent Data: Song data stored in sql_app.db (SQLite).
+
+Comprehensive CRUD Operations: POST, GET, PUT, PATCH, DELETE for songs.
+
+Advanced Search Functionality: Filter songs by title, artist, album, genre, release_year.
+
+Pagination: Control results with skip and limit parameters.
+
+External Lyrics Integration: Fetch lyrics from lyrics.ovh.
+
+In-Memory Caching: Cache lyrics results for 10 minutes.
+
+Asynchronous Metadata Enrichment: Background tasks for non-blocking data enrichment.
+
+Enriched Metadata: Store and retrieve bpm, mood, enriched_genre for songs.
+
+HTTP Status Codes: Appropriate responses for clear communication.
+
+Error Handling: Meaningful responses for various scenarios.
+
+🛠️ Setup and Installation
 Follow these steps to get the project up and running on your local machine.
 
-### Prerequisites
+Prerequisites
+Python 3.12+ (or the specific Python version you used for venv creation)
 
-- **Python 3.12+** (or the specific Python version you used for `venv` creation)
-- `pip` (Python package installer)
+pip (Python package installer)
 
-### 1. Clone the Repository
+(Optional, but recommended for database inspection) DB Browser for SQLite: https://sqlitebrowser.org/dl/
 
-If you haven't already, clone the project repository:
+1. Clone the Repository
+   If you haven't already, clone the project repository:
 
-```bash
-git clone https://github.com/absra47/song_managment.git  # Replace with your actual repository URL
+git clone https://github.com/absra47/song_managment.git
 cd song_managment # Or adjust to your project's root directory name
-```
 
-### 2. Create and Activate Virtual Environment
+2. Create and Activate Virtual Environment
+   It's highly recommended to use a virtual environment to manage dependencies:
 
-It's highly recommended to use a virtual environment to manage dependencies:
-
-```bash
 python3.12 -m venv venv # Creates a virtual environment named 'venv'
 source venv/bin/activate # Activates the virtual environment
+
 # On Windows, use `.\venv\Scripts\activate.bat` (Command Prompt) or `.\venv\Scripts\activate.ps1` (PowerShell)
-```
 
-### 3. Install Dependencies
+3. Install Dependencies
+   Install all the necessary Python packages. These are listed in requirements.txt:
 
-Install all the necessary Python packages. These are listed in `requirements.txt`:
-
-```bash
 pip install -r requirements.txt
-```
 
-_(If you don't have `requirements.txt` generated yet, ensure you install `requests` and `cachetools` along with the others):_
+(If you don't have requirements.txt generated yet, you can run: pip install fastapi "uvicorn[standard]" sqlalchemy python-dotenv requests cachetools)
 
-```bash
-pip install fastapi "uvicorn[standard]" sqlalchemy python-dotenv requests cachetools
-```
+4. Database Setup
+   The application uses an SQLite database. It will be created automatically on startup.
 
-### 4. Database Setup
+Environment Variables: Create a new file named .env in the root of your project directory (the same level as main.py).
 
-The application uses an SQLite database, which will be automatically created on startup.
+Add the following line to it:
 
-- **Environment Variables:** Create a new file named **`.env`** in the root of your project directory (the same level as `main.py`).
-- Add the following line to it:
-  ```
-  DATABASE_URL="sqlite:///./sql_app.db"
-  ```
-  This line tells the application the connection string for your SQLite database file.
+DATABASE_URL="sqlite:///./sql_app.db"
 
----
+This line tells the application the connection string for your SQLite database file.
 
-## 🚀 How to Run
-
+🚀 How to Run
 Once setup is complete, you can start the FastAPI server:
 
-1.  **Ensure your virtual environment is activated.**
-2.  **Run the application:**
+Ensure your virtual environment is activated.
 
-    ```bash
-    uvicorn main:app --reload
-    ```
+Run the application:
 
-    The `--reload` flag is useful during development, as it automatically restarts the server whenever you save changes to your code.
+uvicorn main:app --reload
 
-3.  **Access the API Documentation:**
-    Once the server is running, you can interact with your API through the interactive documentation (powered by **Swagger UI**) at:
-    `http://127.0.0.1:8000/docs`
+The --reload flag is useful during development, as it automatically restarts the server whenever you save changes to your code.
 
-    Alternatively, you can view the ReDoc documentation at:
-    `http://127.0.0.1:8000/redoc`
+Access the API Documentation:
+Once the server is running, you can interact with your API through the interactive documentation (powered by Swagger UI) at:
+http://127.0.0.1:8000/docs
 
----
+Alternatively, you can view the ReDoc documentation at:
+http://127.0.0.1:8000/redoc
 
-## 📚 API Endpoints and Usage
-
+📚 API Endpoints and Usage
 Here's a quick overview of the available endpoints and how to interact with your music catalog. For detailed examples, refer to the interactive documentation (Swagger UI).
 
-### 1. Create a Song
+1. Create a Song
+   URL: /songs/
 
-- **URL**: `/songs/`
-- **Method**: `POST`
-- **Description**: Adds a new song record to the database. The `id` is auto-generated.
-- **Example Body:**
-  ```json
-  {
-    "title": "Bohemian Rhapsody",
-    "artist": "Queen",
-    "album": "A Night at the Opera",
-    "genre": "Rock",
-    "release_year": 1975
-  }
-  ```
+Method: POST
 
-### 2. Get All Songs
+Description: Adds a new song record to the database. The id is auto-generated.
 
-- **URL**: `/songs/`
-- **Method**: `GET`
-- **Description**: Retrieves a list of all songs stored in the database.
-- **Example:** `http://127.0.0.1:8000/songs/`
+Example Body:
 
-### 3. Get a Song by ID
+{
+"title": "Bohemian Rhapsody",
+"artist": "Queen",
+"album": "A Night at the Opera",
+"genre": "Rock",
+"release_year": 1975
+}
 
-- **URL**: `/songs/{song_id}`
-- **Method**: `GET`
-- **Path Parameter**: `song_id` (integer)
-- **Description**: Fetches a specific song by its unique ID.
-- **Example:** `http://127.0.0.1:8000/songs/1`
+2. Get All Songs
+   URL: /songs/
 
-### 4. Search Songs
+Method: GET
 
-- **URL**: `/songs/search/`
-- **Method**: `GET`
-- **Description**: Searches for songs based on optional criteria.
-- **Query Parameters**: `title`, `artist`, `album`, `genre`, `release_year`, `skip`, `limit`.
-- **Examples:**
-  - Search by artist and year: `http://127.0.0.1:8000/songs/search?artist=Drake&release_year=2020`
-  - Search by title and genre: `http://127.0.0.1:8000/songs/search?title=Bohemian&genre=Rock`
-  - Get the next 10 results after the first 20 for 'Pop' songs: `http://17.0.0.1:8000/songs/search?genre=Pop&skip=20&limit=10`
+Description: Retrieves a list of all songs stored in the database. Supports pagination.
 
-### 5. Update a Song (Full Replacement)
+Query Parameters:
 
-- **URL**: `/songs/{song_id}`
-- **Method**: `PUT`
-- **Path Parameter**: `song_id` (integer)
-- **Description**: Fully replaces an existing song's data. Requires all fields in the request body.
-- **Example Request Body (for PUT /songs/1):**
-  ```json
-  {
-    "id": 1,
-    "title": "Bohemian Rhapsody (Remastered)",
-    "artist": "Queen",
-    "album": "A Night at the Opera (Deluxe Edition)",
-    "genre": "Classic Rock",
-    "release_year": 1975
-  }
-  ```
+skip: Number of records to skip (for pagination, default 0).
 
-### 6. Partially Update a Song
+limit: Maximum number of records to return (for pagination, default 100).
 
-- **URL**: `/songs/{song_id}`
-- **Method**: `PATCH`
-- **Path Parameter**: `song_id` (integer)
-- **Description**: Partially updates an existing song's attributes. Provide only the fields you wish to change.
-- **Example Request Body (for PATCH /songs/2):**
-  ```json
-  {
-    "genre": "Funk/Pop",
-    "release_year": 1983
-  }
-  ```
+Example: http://127.0.0.1:8000/songs/?skip=0&limit=10
 
-### 7. Delete a Song
+3. Get a Song by ID
+   URL: /songs/{song_id}
 
-- **URL**: `/songs/{song_id}`
-- **Method**: `DELETE`
-- **Path Parameter**: `song_id` (integer)
-- **Description**: Removes a song from the catalog.
-- **Response**: `204 No Content` on success.
+Method: GET
 
-### 8. Fetch Song Lyrics
+Path Parameter: song_id (integer)
 
-- **URL**: `/lyrics`
-- **Method**: `GET`
-- **Description**: Fetches lyrics for a given song and artist. Results are cached for 10 minutes.
-- **Query Parameters**:
-  - `song`: The title of the song (required).
-  - `artist`: The artist of the song (required).
-- **Examples:**
-  - Fetch lyrics for "Imagine" by "John Lennon": `http://127.0.0.1:8000/lyrics?song=Imagine&artist=John%20Lennon`
-  - Fetch lyrics for "Bohemian Rhapsody" by "Queen": `http://127.0.0.1:8000/lyrics?song=Bohemian%20Rhapsody&artist=Queen`
+Description: Fetches a specific song by its unique ID, including any enriched metadata.
 
----
+Example: http://127.0.0.1:8000/songs/1
 
-## 👩‍💻 Development
+4. Search Songs
+   URL: /songs/search/
 
-### Project Structure
+Method: GET
 
-```
+Description: Searches for songs based on optional criteria.
+
+Query Parameters: title, artist, album, genre, release_year, skip, limit.
+
+Examples:
+
+Search by artist and year: http://127.0.0.1:8000/songs/search?artist=Drake&release_year=2020
+
+Search by title and genre: http://127.0.0.1:8000/songs/search?title=Bohemian&genre=Rock
+
+5. Update a Song (Full Replacement)
+   URL: /songs/{song_id}
+
+Method: PUT
+
+Path Parameter: song_id (integer)
+
+Description: Fully replaces an existing song's data. Requires all fields in the request body (including optional metadata fields if you want to clear them or set them manually).
+
+Example Request Body (for PUT /songs/1):
+
+{
+"id": 1,
+"title": "Bohemian Rhapsody (Remastered)",
+"artist": "Queen",
+"album": "A Night at the Opera (Deluxe Edition)",
+"genre": "Classic Rock",
+"release_year": 1975,
+"bpm": 144,
+"mood": "Epic",
+"enriched_genre": "Progressive Rock"
+}
+
+6. Partially Update a Song
+   URL: /songs/{song_id}
+
+Method: PATCH
+
+Path Parameter: song_id (integer)
+
+Description: Partially updates an existing song's attributes. Provide only the fields you wish to change.
+
+Example Request Body (for PATCH /songs/2):
+
+{
+"genre": "Funk/Pop",
+"release_year": 1983,
+"mood": "Groovy"
+}
+
+7. Delete a Song
+   URL: /songs/{song_id}
+
+Method: DELETE
+
+Path Parameter: song_id (integer)
+
+Description: Removes a song from the catalog.
+
+Response: 204 No Content on success.
+
+8. Fetch Song Lyrics
+   URL: /lyrics
+
+Method: GET
+
+Description: Fetches lyrics for a given song and artist. Results are cached for 10 minutes.
+
+Query Parameters: song, artist.
+
+Examples:
+
+http://127.0.0.1:8000/lyrics?song=Imagine&artist=John%20Lennon
+
+9. Trigger Metadata Enrichment
+   URL: /enrich-metadata
+
+Method: POST
+
+Description: Triggers an asynchronous background task to fetch and enrich metadata (BPM, mood, enriched genre) for a specified song. The API responds immediately.
+
+Request Body:
+
+{
+"song_id": 1
+}
+
+Response: 202 Accepted and a message indicating the task was queued. Check server logs for enrichment progress.
+
+👩‍💻 Development
+Project Structure
 .
-├── main.py             # FastAPI application setup and API endpoints
-├── crud.py             # CRUD (Create, Read, Update, Delete) operations using SQLAlchemy
-├── models.py           # SQLAlchemy ORM models (defines database tables)
-├── schemas.py          # Pydantic models for request/response data validation
-├── database.py         # SQLAlchemy database connection and session management
-├── lyrics_fetcher.py   # Logic for fetching and caching song lyrics
-├── .env                # Environment variables (e.g., DATABASE_URL)
-├── requirements.txt    # Project dependencies
-└── README.md           # This documentation file
-```
-
-```
-
-```
+├── main.py # FastAPI application setup and API endpoints
+├── crud.py # CRUD (Create, Read, Update, Delete) operations using SQLAlchemy
+├── models.py # SQLAlchemy ORM models (defines database tables)
+├── schemas.py # Pydantic models for request/response data validation
+├── database.py # SQLAlchemy database connection and session management
+├── lyrics_fetcher.py # Logic for fetching and caching song lyrics
+├── mock_enrichment_service.py # Mock external service for metadata enrichment
+├── .env # Environment variables (e.g., DATABASE_URL)
+├── requirements.txt # Project dependencies
+└── README.md # This documentation file

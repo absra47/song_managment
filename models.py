@@ -12,6 +12,14 @@ class Song(Base):
     genre = Column(String)
     release_year = Column(Integer)
 
+     # --- NEW: Enriched Metadata Fields ---
+    # These fields are optional as not all songs will immediately have enriched data
+    bpm = Column(Integer, nullable=True, default=None) # Beats Per Minute
+    mood = Column(String, nullable=True, default=None) # e.g., "Energetic", "Relaxed"
+    enriched_genre = Column(String, nullable=True, default=None) # e.g., "Pop-Rock", "Electro-Funk"
+    # You can add more fields as needed, like 'instrumentation', 'vocal_type', etc.
+
+
     # This __repr__ method is useful for debugging, helps in printing objects.
     def __repr__(self):
         return (f"<Song(id={self.id}, title='{self.title}', artist='{self.artist}', "
